@@ -1,0 +1,27 @@
+name: Offline checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Test on Node 24
+        run: node --test test.mjs oauth.test.mjs
+      - name: Confirm the action fails closed without a credential
+        id: gate
+        continue-on-error: true
+        uses: ./
+      - name: The secret-free action must fail
+        if: steps.gate.outcome != 'failure'
+        run: exit 1

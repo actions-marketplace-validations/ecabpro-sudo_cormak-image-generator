@@ -1,0 +1,43 @@
+name: Cormak image draft
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: "One UUID per generation; reuse it for reruns"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: cormak-image-${{ inputs.request_id }}
+  cancel-in-progress: false
+jobs:
+  draft:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    environment: cormak
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      # Replace owner and commit SHA after Cormak has published the Action.
+      - uses: YOUR_ORG/cormak-image-generator@REVIEWED_FULL_COMMIT_SHA
+        id: draft
+        env:
+          CORMAK_API_KEY: ${{ secrets.CORMAK_API_KEY }}
+        with:
+          request_id: ${{ inputs.request_id }}
+          allow_paid: "true"
+          max_credits: "2"
+          prompt: A brass desk lamp on a dark background with space for a title
+          model: nano2
+          aspect_ratio: "16:9"
+          quality: standard
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        if: steps.draft.outputs.status == 'complete'
+        with:
+          name: cormak-image-draft
+          path: ${{ steps.draft.outputs.output_path }}
+          if-no-files-found: error
+          retention-days: 3
